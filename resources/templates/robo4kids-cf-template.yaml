@@ -1,0 +1,280 @@
+Description: 
+
+    This template deploys the required resources for the AWS RoboMaker Workshops. This includes the following - 
+    a VPC, with a pair of public subnets spread across two Availability Zones, 
+    an Internet Gateway, with a default route on the public subnets,
+    a s3 bucket for bundles and other assets,
+    IAM roles for simulation and deployment.
+
+Parameters:
+
+    s3BucketName:
+        Description: Please enter the bucket name for your RoboMaker assets. This must be unique and use only lowercase characters, '.' or '-'.
+        Type: String
+        AllowedPattern: '[a-z0-9+-.]*'
+
+    VpcCIDR: 
+        Description: Please enter the IP range (CIDR notation) for this VPC
+        Type: String
+        Default: 10.168.0.0/16
+
+    PublicSubnet1CIDR:
+        Description: Please enter the IP range (CIDR notation) for the public subnet in the first Availability Zone
+        Type: String
+        Default: 10.168.10.0/24
+
+    PublicSubnet2CIDR:
+        Description: Please enter the IP range (CIDR notation) for the public subnet in the second Availability Zone
+        Type: String
+        Default: 10.168.11.0/24
+    
+    PublicSubnet3CIDR:
+        Description: Please enter the IP range (CIDR notation) for the public subnet in the third Availability Zone
+        Type: String
+        Default: 10.168.12.0/24
+    
+    PublicSubnet4CIDR:
+        Description: Please enter the IP range (CIDR notation) for the public subnet in the fourth Availability Zone
+        Type: String
+        Default: 10.168.13.0/24
+
+
+Resources:
+
+    VPC: 
+        Type: 'AWS::EC2::VPC'
+        Properties:
+            CidrBlock: !Ref VpcCIDR
+            Tags: 
+                - Key: Name 
+                  Value: !Ref AWS::StackName
+
+    InternetGateway:
+        Type: 'AWS::EC2::InternetGateway'
+        Properties:
+            Tags:
+                - Key: Name
+                  Value: !Ref AWS::StackName
+
+    InternetGatewayAttachment:
+        Type: 'AWS::EC2::VPCGatewayAttachment'
+        Properties:
+            InternetGatewayId: !Ref InternetGateway
+            VpcId: !Ref VPC
+
+    S3Bucket:
+        Type: 'AWS::S3::Bucket'
+        Properties:
+          BucketName: !Sub ${s3BucketName}-${AWS::Region}-rmw-assets
+
+    PublicSubnet1: 
+        Type: 'AWS::EC2::Subnet'
+        Properties:
+            VpcId: !Ref VPC
+            AvailabilityZone: !Select [ 0, !GetAZs '' ]
+            CidrBlock: !Ref PublicSubnet1CIDR
+            MapPublicIpOnLaunch: true
+            Tags: 
+                - Key: Name 
+                  Value: !Sub ${AWS::StackName} ${AWS::Region} Public Subnet (AZ1)
+
+    PublicSubnet2: 
+        Type: 'AWS::EC2::Subnet'
+        Properties:
+            VpcId: !Ref VPC
+            AvailabilityZone: !Select [ 1, !GetAZs '' ]
+            CidrBlock: !Ref PublicSubnet2CIDR
+            MapPublicIpOnLaunch: true
+            Tags: 
+                - Key: Name 
+                  Value: !Sub ${AWS::StackName} ${AWS::Region} Public Subnet (AZ2)
+    
+    PublicSubnet3: 
+        Type: 'AWS::EC2::Subnet'
+        Properties:
+            VpcId: !Ref VPC
+            AvailabilityZone: !Select [ 2, !GetAZs '' ]
+            CidrBlock: !Ref PublicSubnet3CIDR
+            MapPublicIpOnLaunch: true
+            Tags: 
+                - Key: Name 
+                  Value: !Sub ${AWS::StackName} ${AWS::Region} Public Subnet (AZ3)
+
+    PublicSubnet4: 
+        Type: 'AWS::EC2::Subnet'
+        Properties:
+            VpcId: !Ref VPC
+            AvailabilityZone: !Select [ 3, !GetAZs '' ]
+            CidrBlock: !Ref PublicSubnet4CIDR
+            MapPublicIpOnLaunch: true
+            Tags: 
+                - Key: Name 
+                  Value: !Sub ${AWS::StackName} ${AWS::Region} Public Subnet (AZ4)
+
+    PublicRouteTable:
+        Type: 'AWS::EC2::RouteTable'
+        Properties: 
+            VpcId: !Ref VPC
+            Tags: 
+                - Key: Name 
+                  Value: !Sub ${AWS::StackName} ${AWS::Region} Public Routes
+
+    DefaultPublicRoute: 
+        Type: 'AWS::EC2::Route'
+        DependsOn: InternetGatewayAttachment
+        Properties: 
+            RouteTableId: !Ref PublicRouteTable
+            DestinationCidrBlock: 0.0.0.0/0
+            GatewayId: !Ref InternetGateway
+
+    PublicSubnet1RouteTableAssociation:
+        Type: 'AWS::EC2::SubnetRouteTableAssociation'
+        Properties:
+            RouteTableId: !Ref PublicRouteTable
+            SubnetId: !Ref PublicSubnet1
+
+    PublicSubnet2RouteTableAssociation:
+        Type: 'AWS::EC2::SubnetRouteTableAssociation'
+        Properties:
+            RouteTableId: !Ref PublicRouteTable
+            SubnetId: !Ref PublicSubnet2
+    
+    PublicSubnet3RouteTableAssociation:
+        Type: 'AWS::EC2::SubnetRouteTableAssociation'
+        Properties:
+            RouteTableId: !Ref PublicRouteTable
+            SubnetId: !Ref PublicSubnet3
+
+    PublicSubnet4RouteTableAssociation:
+        Type: 'AWS::EC2::SubnetRouteTableAssociation'
+        Properties:
+            RouteTableId: !Ref PublicRouteTable
+            SubnetId: !Ref PublicSubnet4
+
+    RoboMakerSimulationRole:
+        Type: 'AWS::IAM::Role'
+        Properties:
+          RoleName: !Sub robomaker-simulation-role-${AWS::Region}
+          AssumeRolePolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Principal:
+                  Service:
+                    - robomaker.amazonaws.com
+                Action:
+                  - sts:AssumeRole
+          ManagedPolicyArns:
+            - 'arn:aws:iam::aws:policy/CloudWatchFullAccess'
+            - 'arn:aws:iam::aws:policy/AWSRoboMaker_FullAccess'
+            - 'arn:aws:iam::aws:policy/AmazonS3FullAccess'
+            - 'arn:aws:iam::aws:policy/AmazonKinesisVideoStreamsFullAccess'
+            - 'arn:aws:iam::aws:policy/AmazonRekognitionFullAccess'
+
+    RoboMakerDeploymentRole:
+        Type: 'AWS::IAM::Role'
+        Properties:
+          RoleName: !Sub robomaker-deployment-role-${AWS::Region}
+          AssumeRolePolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Principal:
+                  Service:
+                    - lambda.amazonaws.com
+                    - iot.amazonaws.com
+                    - greengrass.amazonaws.com
+                Action:
+                  - 'sts:AssumeRole'
+          ManagedPolicyArns:
+            - 'arn:aws:iam::aws:policy/service-role/AWSGreengrassResourceAccessRolePolicy'
+            - 'arn:aws:iam::aws:policy/AmazonS3FullAccess'
+            - 'arn:aws:iam::aws:policy/AmazonKinesisVideoStreamsFullAccess'
+            - 'arn:aws:iam::aws:policy/AmazonRekognitionFullAccess'
+            - 'arn:aws:iam::aws:policy/CloudWatchFullAccess'
+            - 'arn:aws:iam::aws:policy/AWSRoboMaker_FullAccess'
+    
+    Instance:
+        Type: 'AWS::EC2::Instance'
+        Properties:
+          ImageId: 'ami-0ee3b9f931752ed1c'
+          InstanceType: 'm4.large'
+          UserData: 'IyEvYmluL2Jhc2gKClVOSVhfVVNFUj0idWJ1bnR1IgpVTklYX1VTRVJfSE9NRT0iL2hvbWUvdWJ1bnR1IgpFTlZJUk9OTUVOVF9QQVRIPSIvaG9tZS91YnVudHUvZW52aXJvbm1lbnQiClVOSVhfR1JPVVA9JChpZCAtZyAtbiAiJFVOSVhfVVNFUiIpCgojIEFwcGx5IHNlY3VyaXR5IHBhdGNoZXMKT1BFUkFUSU5HX1NZU1RFTT0kKGF3ayAtRj0gJyQxPT0iSUQiIHsgcHJpbnQgJDIgO30nIC9ldGMvb3MtcmVsZWFzZSB8IHNlZCAtZSAncy9eIi8vJyAtZSAncy8iJC8vJykKaWYgWyAiJE9QRVJBVElOR19TWVNURU0iID09ICJhbXpuIiBdOyB0aGVuCiAgICB5dW0gLXEgLXkgdXBkYXRlIC0tc2VjdXJpdHkgPiAvdG1wL2luaXQteXVtLXVwZGF0ZS1zZWN1cml0eSAyPiYxICYKZWxpZiBbICIkT1BFUkFUSU5HX1NZU1RFTSIgPT0gInVidW50dSIgXTsgdGhlbgogICAgdW5hdHRlbmRlZC11cGdyYWRlICYKZmkKCiMgYWRkIFNTSCBrZXkKaW5zdGFsbCAtZyAiJFVOSVhfR1JPVVAiIC1vICIkVU5JWF9VU0VSIiAtbSA3NTUgLWQgIiRVTklYX1VTRVJfSE9NRSIvLnNzaApjYXQgPDwnRU9GJyA+PiAiJFVOSVhfVVNFUl9IT01FIi8uc3NoL2F1dGhvcml6ZWRfa2V5cwojIEltcG9ydGFudAojIC0tLS0tLS0tLQojIFRoZSBmb2xsb3dpbmcgcHVibGljIGtleSBpcyByZXF1aXJlZCBieSBDbG91ZDkgSURFCiMgUmVtb3ZpbmcgdGhpcyBrZXkgd2lsbCBtYWtlIHRoaXMgRUMyIGluc3RhbmNlIGluYWNjZXNzaWJsZSBieSB0aGUgSURFCiMKY2VydC1hdXRob3JpdHkgc3NoLXJzYSBBQUFBQjNOemFDMXljMkVBQUFBREFRQUJBQUFDQVFETDZiZUFTUlNLRFFndGhXTTBjSGxyNnYvYk5yU053OU1MYTRYbDgrcUg3d0ZvQUNaMmtsMjVxcWlGMThjaXFRYkJ5VVcyVnd2WmxFU0RTOCt3c3Y4YjRRcm9OZ2FubnRtYzQ5M3hEc2VxekFOSWNiYU9VYWpxTTQvcVZILzBPUWFMTDRoWFpVOHBOYnRNTlkwK3U0eWlJU1Q1M0VySmlCOVNuWk5uWnBNc08zTnhSNWl0QnEyZGtrLzZJaFBjakdMWG5tNzNUWlRmWWx2SjBuOHZOMEVzeWlmSVFIbDVmb3BCN1J1QSt5cjQwV2lOODdGQlhUWXdyRE5yZHd3NXF6TXlrUUJubkkxdDZlQW9abDBucFlBbjJ4Q3pPekpBUUNWRkNSZzBVa2hacEpPdHgwYWUwdDFJZkNjb0orMk9xd2RwWGNqZlZqUEgwNDJYbzdWRjQ3S1FYYkoySkZyQ2NYTElMd2NLYlhFZ1I4L2JWSnJvTnhCZzE3UW5JV1gyUEtVRHlmdWVjZXJlMkVtNVM5RWpMcy9RYUFCWENkazVxY1R1RzB4YVZNbno3S0NDdkU4T1ZlbG1pMmVwdlVqa29idDVwclZ5R3NjM052Ni9ISTFoeFgrcVJuRjVlUkpzcFVkdUZHTlRiNXFkdER4MUo2NjR0TkdaaDArZkJEYVd4dGFBbFZtUndQZEpOcit4ZytnVGpYYUsvTkdIblpXcXZFbFJ6bjVLYzBsamxNZXRiYXdmTHFiR3FWblpaVGRhV3dJb2Vsb01UQVE5T2dwazVZSWtMNlp2VFNEUGRheGdXOUxNZjNPdTV2VkxlU0FBUG5rTDdjalMrcis4ODVjY1hYZE9YLzZDRGluZWc2L2lCV0NwdGViM0x5Q1BNek5QaVltSTJsUk9Bb0ViQVE9PSA3MjZmMDAyZjkzOWU0ZWFiYjE3YzgyYzFiYjYxYWY5OUBjbG91ZDkuYW1hem9uLmNvbQoKCiMKIyBBZGQgYW55IGFkZGl0aW9uYWwga2V5cyBiZWxvdyB0aGlzIGxpbmUKIwoKRU9GCgojIGFsbG93IGF1dG9tYXRpYyBzaHV0ZG93bgplY2hvICIkVU5JWF9VU0VSICAgIEFMTD0oQUxMKSBOT1BBU1NXRDogL3NiaW4vcG93ZXJvZmYsIC9zYmluL3JlYm9vdCwgL3NiaW4vc2h1dGRvd24iID4+IC9ldGMvc3Vkb2VycwoKbG4gLXMgL29wdC9jOSAiJFVOSVhfVVNFUl9IT01FIi8uYzkKY2hvd24gLVIgIiRVTklYX1VTRVIiOiIkVU5JWF9HUk9VUCIgIiRVTklYX1VTRVJfSE9NRSIvLmM5IC9vcHQvYzkKaW5zdGFsbCAtZyAiJFVOSVhfR1JPVVAiIC1vICIkVU5JWF9VU0VSIiAtbSA3NTUgLWQgIiRFTlZJUk9OTUVOVF9QQVRIIgoKaWYgWyAiJEVOVklST05NRU5UX1BBVEgiID09ICIvaG9tZS9lYzItdXNlci9lbnZpcm9ubWVudCIgXSAmJiBncmVwICJhbGlhcyBweXRob249cHl0aG9uMjciICIkVU5JWF9VU0VSX0hPTUUiLy5iYXNocmM7IHRoZW4KCiAgICBjYXQgPDwnRU9GJyA+ICIkVU5JWF9VU0VSX0hPTUUiLy5iYXNocmMKIyAuYmFzaHJjCgpleHBvcnQgUEFUSD0kUEFUSDokSE9NRS8ubG9jYWwvYmluOiRIT01FL2JpbgoKIyBsb2FkIG52bQpleHBvcnQgTlZNX0RJUj0iJEhPTUUvLm52bSIKWyAiJEJBU0hfVkVSU0lPTiIgXSAmJiBucG0oKSB7CiAgICAjIGhhY2s6IGF2b2lkIHNsb3cgbnBtIHNhbml0eSBjaGVjayBpbiBudm0KICAgIGlmIFsgIiQqIiA9PSAiY29uZmlnIGdldCBwcmVmaXgiIF07IHRoZW4gd2hpY2ggbm9kZSB8IHNlZCAicy9iaW5cL25vZGUvLyI7CiAgICBlbHNlICQod2hpY2ggbnBtKSAiJEAiOyBmaQp9CiMgWyAtcyAiJE5WTV9ESVIvbnZtLnNoIiBdICYmIC4gIiROVk1fRElSL252bS5zaCIgICMgVGhpcyBsb2FkcyBudm0KcnZtX3NpbGVuY2VfcGF0aF9taXNtYXRjaF9jaGVja19mbGFnPTEgIyBwcmV2ZW50IHJ2bSBjb21wbGFpbnRzIHRoYXQgbnZtIGlzIGZpcnN0IGluIFBBVEgKdW5zZXQgbnBtICMgZW5kIGhhY2sKCgojIFVzZXIgc3BlY2lmaWMgYWxpYXNlcyBhbmQgZnVuY3Rpb25zCmFsaWFzIHB5dGhvbj1weXRob24yNwoKIyBtb2RpZmljYXRpb25zIG5lZWRlZCBvbmx5IGluIGludGVyYWN0aXZlIG1vZGUKaWYgWyAiJFBTMSIgIT0gIiIgXTsgdGhlbgogICAgIyBTZXQgZGVmYXVsdCBlZGl0b3IgZm9yIGdpdAogICAgZ2l0IGNvbmZpZyAtLWdsb2JhbCBjb3JlLmVkaXRvciBuYW5vCgogICAgIyBUdXJuIG9uIGNoZWNrd2luc2l6ZQogICAgc2hvcHQgLXMgY2hlY2t3aW5zaXplCgogICAgIyBrZWVwIG1vcmUgaGlzdG9yeQogICAgc2hvcHQgLXMgaGlzdGFwcGVuZAogICAgZXhwb3J0IEhJU1RTSVpFPTEwMDAwMAogICAgZXhwb3J0IEhJU1RGSUxFU0laRT0xMDAwMDAKICAgIGV4cG9ydCBQUk9NUFRfQ09NTUFORD0iaGlzdG9yeSAtYTsiCgogICAgIyBTb3VyY2UgZm9yIEdpdCBQUzEgZnVuY3Rpb24KICAgIGlmICEgdHlwZSAtdCBfX2dpdF9wczEgJiYgWyAtZSAiL3Vzci9zaGFyZS9naXQtY29yZS9jb250cmliL2NvbXBsZXRpb24vZ2l0LXByb21wdC5zaCIgXTsgdGhlbgogICAgICAgIC4gL3Vzci9zaGFyZS9naXQtY29yZS9jb250cmliL2NvbXBsZXRpb24vZ2l0LXByb21wdC5zaAogICAgZmkKCiAgICAjIENsb3VkOSBkZWZhdWx0IHByb21wdAogICAgX2Nsb3VkOV9wcm9tcHRfdXNlcigpIHsKICAgICAgICBpZiBbICIkQzlfVVNFUiIgPSByb290IF07IHRoZW4KICAgICAgICAgICAgZWNobyAiJFVTRVIiCiAgICAgICAgZWxzZQogICAgICAgICAgICBlY2hvICIkQzlfVVNFUiIKICAgICAgICBmaQogICAgfQoKICAgIFBTMT0nXFtcMDMzWzAxOzMybVxdJChfY2xvdWQ5X3Byb21wdF91c2VyKVxbXDAzM1swMG1cXTpcW1wwMzNbMDE7MzRtXF1cd1xbXDAzM1swMG1cXSQoX19naXRfcHMxICIgKCVzKSIgMj4vZGV2L251bGwpICQgJwpmaQoKRU9GCgogICAgY2hvd24gIiRVTklYX1VTRVIiOiIkVU5JWF9HUk9VUCIgIiRVTklYX1VTRVJfSE9NRSIvLmJhc2hyYwpmaQoKaWYgWyAiJEVOVklST05NRU5UX1BBVEgiID09ICIvaG9tZS9lYzItdXNlci9lbnZpcm9ubWVudCIgXSAmJiBbICEgLWYgIiRFTlZJUk9OTUVOVF9QQVRIIi9SRUFETUUubWQgXTsgdGhlbgogICAgY2F0IDw8J0VPRicgPj4gIiRFTlZJUk9OTUVOVF9QQVRIIi9SRUFETUUubWQKICAgICAgICAgX19fICAgICAgICBfX19fX18gICAgIF9fX18gXyAgICAgICAgICAgICAgICAgXyAgX19fCiAgICAgICAgLyBcIFwgICAgICAvIC8gX19ffCAgIC8gX19ffCB8IF9fXyAgXyAgIF8gIF9ffCB8LyBfIFwKICAgICAgIC8gXyBcIFwgL1wgLyAvXF9fXyBcICB8IHwgICB8IHwvIF8gXHwgfCB8IHwvIF9gIHwgKF8pIHwKICAgICAgLyBfX18gXCBWICBWIC8gIF9fXykgfCB8IHxfX198IHwgKF8pIHwgfF98IHwgKF98IHxcX18sIHwKICAgICAvXy8gICBcX1xfL1xfLyAgfF9fX18vICAgXF9fX198X3xcX19fLyBcX18sX3xcX18sX3wgIC9fLwogLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KCgpIaSB0aGVyZSEgV2VsY29tZSB0byBBV1MgQ2xvdWQ5IQoKVG8gZ2V0IHN0YXJ0ZWQsIGNyZWF0ZSBzb21lIGZpbGVzLCBwbGF5IHdpdGggdGhlIHRlcm1pbmFsLApvciB2aXNpdCBodHRwczovL2RvY3MuYXdzLmFtYXpvbi5jb20vY29uc29sZS9jbG91ZDkvIGZvciBvdXIgZG9jdW1lbnRhdGlvbi4KCkhhcHB5IGNvZGluZyEKCkVPRgoKICAgIGNob3duICIkVU5JWF9VU0VSIjoiJFVOSVhfR1JPVVAiICIkVU5JWF9VU0VSX0hPTUUiL2Vudmlyb25tZW50L1JFQURNRS5tZApmaQoKIyBGaXggZm9yIHBlcm1pc3Npb24gZXJyb3Igd2hlbiB0cnlpbmcgdG8gY2FsbCBgZ2VtIGluc3RhbGxgCmNob3duICIkVU5JWF9VU0VSIiAtUiAvdXNyL2xvY2FsL3J2bS9nZW1zCgojVGhpcyBzY3JpcHQgaXMgYXBwZW5kZWQgdG8gYW5vdGhlciBiYXNoIHNjcmlwdCwgc28gaXQgZG9lcyBub3QgbmVlZCBhIGJhc2ggc2NyaXB0IGZpbGUgaGVhZGVyLgoKVU5JWF9VU0VSX0hPTUU9Ii9ob21lL3VidW50dSIKCkM5X0RJUj0kVU5JWF9VU0VSX0hPTUUvLmM5CkNPTkZJR19GSUxFX1BBVEg9IiRDOV9ESVIiL2F1dG9zaHV0ZG93bi1jb25maWd1cmF0aW9uClZGU19DSEVDS19GSUxFX1BBVEg9IiRDOV9ESVIiL3N0b3AtaWYtaW5hY3RpdmUuc2gKCmVjaG8gIlNIVVRET1dOX1RJTUVPVVQ9MzAiID4gIiRDT05GSUdfRklMRV9QQVRIIgpjaG1vZCBhK3cgIiRDT05GSUdfRklMRV9QQVRIIgoKZWNobyAtZSAnIyEvYmluL2Jhc2gKc2V0IC1ldW8gcGlwZWZhaWwKQ09ORklHPSQoY2F0ICckQ09ORklHX0ZJTEVfUEFUSCcpClNIVVRET1dOX1RJTUVPVVQ9JHtDT05GSUcjKj19CmlmICEgW1sgJFNIVVRET1dOX1RJTUVPVVQgPX4gXlswLTldKiQgXV07IHRoZW4KICAgIGVjaG8gInNodXRkb3duIHRpbWVvdXQgaXMgaW52YWxpZCIKICAgIGV4aXQgMQpmaQppc19zaHV0dGluZ19kb3duKCkgewogICAgaXNfc2h1dHRpbmdfZG93bl91YnVudHUgJj4gL2Rldi9udWxsIHx8IGlzX3NodXR0aW5nX2Rvd25fYWwxICY+IC9kZXYvbnVsbCB8fCBpc19zaHV0dGluZ19kb3duX2FsMiAmPiAvZGV2L251bGwKfQppc19zaHV0dGluZ19kb3duX3VidW50dSgpIHsKICAgIGxvY2FsIFRJTUVPVVQKICAgIFRJTUVPVVQ9JChidXNjdGwgZ2V0LXByb3BlcnR5IG9yZy5mcmVlZGVza3RvcC5sb2dpbjEgL29yZy9mcmVlZGVza3RvcC9sb2dpbjEgb3JnLmZyZWVkZXNrdG9wLmxvZ2luMS5NYW5hZ2VyIFNjaGVkdWxlZFNodXRkb3duKQogICAgaWYgWyAiJD8iIC1uZSAiMCIgXTsgdGhlbgogICAgICAgIHJldHVybiAxCiAgICBmaQogICAgaWYgWyAiJChlY2hvICRUSU1FT1VUIHwgYXdrICJ7cHJpbnQgXCQzfSIpIiA9PSAiMCIgXTsgdGhlbgogICAgICAgIHJldHVybiAxCiAgICBlbHNlCiAgICAgICAgcmV0dXJuIDAKICAgIGZpCn0KaXNfc2h1dHRpbmdfZG93bl9hbDEoKSB7CiAgICBwZ3JlcCBzaHV0ZG93bgp9CmlzX3NodXR0aW5nX2Rvd25fYWwyKCkgewogICAgbG9jYWwgRklMRQogICAgRklMRT0vcnVuL3N5c3RlbWQvc2h1dGRvd24vc2NoZWR1bGVkCiAgICBpZiBbWyAtZiAiJEZJTEUiIF1dOyB0aGVuCiAgICAgICAgcmV0dXJuIDAKICAgIGVsc2UKICAgICAgICByZXR1cm4gMQogICAgZmkKfQppc192ZnNfY29ubmVjdGVkKCkgewogICAgcGdyZXAgLWYgdmZzLXdvcmtlciA+L2Rldi9udWxsCn0KCmlmIGlzX3NodXR0aW5nX2Rvd247IHRoZW4KICAgIGlmIFtbICEgJFNIVVRET1dOX1RJTUVPVVQgPX4gXlswLTldKyQgXV0gfHwgaXNfdmZzX2Nvbm5lY3RlZDsgdGhlbgogICAgICAgIHN1ZG8gc2h1dGRvd24gLWMKICAgIGZpCmVsc2UKICAgIGlmIFtbICRTSFVURE9XTl9USU1FT1VUID1+IF5bMC05XSskIF1dICYmICEgaXNfdmZzX2Nvbm5lY3RlZDsgdGhlbgogICAgICAgIHN1ZG8gc2h1dGRvd24gLWggJFNIVVRET1dOX1RJTUVPVVQKICAgIGZpCmZpJyA+ICIkVkZTX0NIRUNLX0ZJTEVfUEFUSCIKCmNobW9kICt4ICIkVkZTX0NIRUNLX0ZJTEVfUEFUSCIKCmVjaG8gIiogKiAqICogKiByb290ICRWRlNfQ0hFQ0tfRklMRV9QQVRIIiA+IC9ldGMvY3Jvbi5kL2M5LWF1dG9tYXRpYy1zaHV0ZG93bgo='
+          Tags:
+            - Key: Name 
+              Value: !Sub ${AWS::StackName} ${AWS::Region} RoboMaker
+          NetworkInterfaces:
+            - AssociatePublicIpAddress: true
+              DeviceIndex: 0
+              SubnetId: !Ref PublicSubnet1
+              GroupSet: !Ref InstanceSecurityGroup
+
+    InstanceSecurityGroup:
+        Type: 'AWS::EC2::SecurityGroup'
+        Properties:
+          GroupDescription: 'Security group for Cloud9 RoboMaker Env'
+          VpcId: !Ref VPC
+          SecurityGroupIngress:
+            - FromPort: '22'
+              ToPort: '22'
+              IpProtocol: tcp
+              CidrIp: 35.172.155.192/27
+            - FromPort: '22'
+              ToPort: '22'
+              IpProtocol: tcp
+              CidrIp: 35.172.155.96/27
+          Tags:
+            - Key: Name 
+              Value: !Sub ${AWS::StackName} ${AWS::Region} RoboMaker
+
+Outputs: 
+
+    VPC: 
+        Description: A reference to the created VPC
+        Value: !Ref VPC
+
+    DefaultSecurityGroupID: 
+        Description: The default security group created with the VPC
+        Value: !GetAtt VPC.DefaultSecurityGroup
+
+    PublicSubnet1:
+        Description: A reference to the public subnet in the 1st Availability Zone
+        Value: !Ref PublicSubnet1
+
+    PublicSubnet2: 
+        Description: A reference to the public subnet in the 2nd Availability Zone
+        Value: !Ref PublicSubnet2
+    
+    PublicSubnet3: 
+        Description: A reference to the public subnet in the 3rd Availability Zone
+        Value: !Ref PublicSubnet3
+
+    PublicSubnet4: 
+        Description: A reference to the public subnet in the 4th Availability Zone
+        Value: !Ref PublicSubnet4
+  
+    RoboMakerS3Bucket:
+        Description: The S3 bucket used to store your AWS RoboMaker assets.
+        Value: !Ref S3Bucket
+
+    SimulationRole:
+        Description: The IAM role that the simulation application will use to access AWS resources.
+        Value: !GetAtt RoboMakerSimulationRole.Arn
+        
+    DeploymentRole:
+        Description: The IAM role that the robot will use to access AWS resources.
+        Value: !GetAtt RoboMakerDeploymentRole.Arn
+
+    SubmitJobSH: 
+        Description: Shell script to run to export variables.
+        Value: !Sub |
+             #!/bin/bash
+             export BUCKET_NAME="${S3Bucket}"
+             export SUBNET1="${PublicSubnet1}"
+             export SUBNET2="${PublicSubnet2}"
+             export SUBNET3="${PublicSubnet3}"
+             export SUBNET4="${PublicSubnet4}"
+             export SECURITY_GROUP="${VPC.DefaultSecurityGroup}"
+             export ROLE_ARN="${RoboMakerSimulationRole.Arn}"
