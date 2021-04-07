@@ -12,6 +12,7 @@ Parameters:
         Description: Please enter the bucket name for your RoboMaker assets. This must be unique and use only lowercase characters, '.' or '-'.
         Type: String
         AllowedPattern: '[a-z0-9+-.]*'
+        Default: robo4kids-deploy
 
     VpcCIDR: 
         Description: Please enter the IP range (CIDR notation) for this VPC
@@ -32,11 +33,6 @@ Parameters:
         Description: Please enter the IP range (CIDR notation) for the public subnet in the third Availability Zone
         Type: String
         Default: 10.168.12.0/24
-    
-    PublicSubnet4CIDR:
-        Description: Please enter the IP range (CIDR notation) for the public subnet in the fourth Availability Zone
-        Type: String
-        Default: 10.168.13.0/24
 
 
 Resources:
@@ -100,17 +96,6 @@ Resources:
                 - Key: Name 
                   Value: !Sub ${AWS::StackName} ${AWS::Region} Public Subnet (AZ3)
 
-    PublicSubnet4: 
-        Type: 'AWS::EC2::Subnet'
-        Properties:
-            VpcId: !Ref VPC
-            AvailabilityZone: !Select [ 3, !GetAZs '' ]
-            CidrBlock: !Ref PublicSubnet4CIDR
-            MapPublicIpOnLaunch: true
-            Tags: 
-                - Key: Name 
-                  Value: !Sub ${AWS::StackName} ${AWS::Region} Public Subnet (AZ4)
-
     PublicRouteTable:
         Type: 'AWS::EC2::RouteTable'
         Properties: 
@@ -144,12 +129,6 @@ Resources:
         Properties:
             RouteTableId: !Ref PublicRouteTable
             SubnetId: !Ref PublicSubnet3
-
-    PublicSubnet4RouteTableAssociation:
-        Type: 'AWS::EC2::SubnetRouteTableAssociation'
-        Properties:
-            RouteTableId: !Ref PublicRouteTable
-            SubnetId: !Ref PublicSubnet4
 
     RoboMakerSimulationRole:
         Type: 'AWS::IAM::Role'
@@ -209,7 +188,8 @@ Resources:
             - AssociatePublicIpAddress: true
               DeviceIndex: 0
               SubnetId: !Ref PublicSubnet1
-              GroupSet: !Ref InstanceSecurityGroup
+              GroupSet: 
+                - !Ref InstanceSecurityGroup
 
     InstanceSecurityGroup:
         Type: 'AWS::EC2::SecurityGroup'
@@ -250,10 +230,6 @@ Outputs:
     PublicSubnet3: 
         Description: A reference to the public subnet in the 3rd Availability Zone
         Value: !Ref PublicSubnet3
-
-    PublicSubnet4: 
-        Description: A reference to the public subnet in the 4th Availability Zone
-        Value: !Ref PublicSubnet4
   
     RoboMakerS3Bucket:
         Description: The S3 bucket used to store your AWS RoboMaker assets.
@@ -275,6 +251,5 @@ Outputs:
              export SUBNET1="${PublicSubnet1}"
              export SUBNET2="${PublicSubnet2}"
              export SUBNET3="${PublicSubnet3}"
-             export SUBNET4="${PublicSubnet4}"
              export SECURITY_GROUP="${VPC.DefaultSecurityGroup}"
              export ROLE_ARN="${RoboMakerSimulationRole.Arn}"

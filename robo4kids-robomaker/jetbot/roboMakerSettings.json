@@ -1,0 +1,118 @@
+{
+  "runConfigurations": [
+    {
+      "id": "JetBot_Cfg01",
+      "name": "JetBot Simulation",
+      "type": "colcon build",
+      "cfg": {
+        "workingDir": "./jetbot/simulation_ws",
+        "cmdArgs": ""
+      }
+    },
+    {
+      "id": "JetBot_Cfg02",
+      "name": "JetBot Simulation",
+      "type": "colcon bundle",
+      "cfg": {
+        "workingDir": "./jetbot/simulation_ws",
+        "cmdArgs": ""
+      }
+    },
+    {
+      "id": "JetBot_SimulationJob1",
+      "name": "JetBot Circle Simulation",
+      "type": "simulation",
+      "cfg": {
+          "simulationApp": {
+            "name": "jetbotCircleSimulation",
+            "sourceBundleFile": "./jetbot/simulation_ws/bundle/output.tar",
+            "architecture": "X86_64",
+            "s3Bucket": "roboblocklyworkshop-chsch-us-west-2-rmw-assets",
+            "launchConfig": {
+              "packageName": "jetbot_sim_app",
+              "launchFile": "circle.launch",
+              "environmentVariables": {}
+            },
+            "simulationSoftwareSuite": {
+              "name": "Gazebo",
+              "version": "9"
+            },
+            "renderingEngine": {
+              "name": "OGRE",
+              "version": "1.x"
+            },
+            "robotSoftwareSuite": {
+              "name": "ROS",
+              "version": "Melodic"
+            }
+          },
+          "simulation": {
+            "maxJobDurationInSeconds": 28800,
+            "failureBehavior": "Fail",
+            "iamRole": "arn:aws:iam::746842823392:role/robomaker-simulation-role-us-west-2",
+            "outputLocation": "roboblocklyworkshop-chsch-us-west-2-rmw-assets",
+            "tags": {}
+          }
+      }
+    },
+    {
+      "id": "JetBot_SimulationJob2",
+      "name": "JetBot Teleop Simulation",
+      "type": "simulation",
+      "cfg": {
+          "simulationApp": {
+            "name": "jetbotTeleopSimulation",
+            "sourceBundleFile": "./jetbot/simulation_ws/bundle/output.tar",
+            "architecture": "X86_64",
+            "s3Bucket": "roboblocklyworkshop-chsch-us-west-2-rmw-assets",
+            "launchConfig": {
+              "packageName": "jetbot_sim_app",
+              "launchFile": "teleop.launch",
+              "environmentVariables": {
+                "IOT_ENDPOINT": "ajlhtk9kwdt15-ats.iot.us-west-2.amazonaws.com"
+              }
+            },
+            "simulationSoftwareSuite": {
+              "name": "Gazebo",
+              "version": "9"
+            },
+            "renderingEngine": {
+              "name": "OGRE",
+              "version": "1.x"
+            },
+            "robotSoftwareSuite": {
+              "name": "ROS",
+              "version": "Melodic"
+            }
+          },
+          "simulation": {
+            "maxJobDurationInSeconds": 28800,
+            "failureBehavior": "Fail",
+            "iamRole": "arn:aws:iam::746842823392:role/robomaker-simulation-role-us-west-2",
+            "outputLocation": "roboblocklyworkshop-chsch-us-west-2-rmw-assets",
+            "vpcConfig": {
+              "subnets": [
+                "subnet-0f6cadd2b5f154b87",
+                "subnet-0eae7c475b42d02d0"
+              ],
+              "securityGroups": [
+                "sg-0fb3dd3e5041d0348"
+              ],
+              "assignPublicIp": true
+            },
+            "tags": {}
+          }
+      }
+    },
+    {
+      "id": "JetBot_wf1",
+      "type": "workflow",
+      "name": "JetBot Simulation - Build and Bundle",
+      "runCfgIds": [
+        "JetBot_Cfg01",
+        "JetBot_Cfg02"
+      ]
+    }
+  ]
+}
+

@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- 
+       Using simulation time means nodes initialized after this
+       will not use the system clock for its ROS clock and 
+       instead wait for simulation ticks. 
+
+       See http://wiki.ros.org/Clock
+
+       Note: set to false for deploying to a real robot.
+  -->
+  <arg name="use_sim_time" default="true"/>
+  <arg name="auto_capture" default="true" />
+  <arg name="model" default="$(find jetbot_description)/urdf/jetbot.urdf"/>
+  <param name="use_sim_time" value="$(arg use_sim_time)"/>
+  <include file="$(find jetbot_description)/launch/gazebo.launch">
+    <arg name="model" value="$(arg model)" />
+  </include>
+
+  <!-- Load joint controller configurations from YAML file to parameter server -->
+  <rosparam command="load"
+    file="$(find jetbot_description)/config/jetbot_diff_drive_control.yaml" 
+    ns="jetbot_diff_controller"/>
+
+  <!-- load the controllers -->
+  <node name="jetbot_controller_spawner" pkg="controller_manager" type="spawner"
+    respawn="false" 
+    output="screen" 
+    args="jetbot_diff_controller"/>
+  
+  <!-- Rotate the robot on launch -->
+  <node pkg="jetbot_sim_app" type="circle.py" name="circle" output="screen"/>
+  <node name="object_detector" pkg="jetbot_sim_app" type="object_detector">
+  	<param name="camera_topic" value="/camera/image_raw/compressed" />
+		<param name="aws_region" value="$(optenv AWS_REGION us-east-1)" />
+		<param name="auto_capture" value="$(arg auto_capture)" /> 
+	</node>
+	
+	<node name="notifier" pkg="jetbot_sim_app" type="notifier" >
+	    <param name="s3_bucket_name" value="robot-blockly-detected-faces" />
+	    <param name="search_object" value="Human" />
+	</node>
+	
+</launch>
