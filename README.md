@@ -1,5 +1,7 @@
 # Robo4Kids
+
 #### This is a project created as a Capstone project for LATAM TECH U Program and is still a work in progress.
+
 Any contribution/suggestion, feel free to contact us ;)
 @antonfu
 @drodelo
@@ -9,14 +11,18 @@ AWS Robo4Kids, is a fully managed service that help students and children progra
 
 If you want to know more about how we develop our project and the services involve, please visit this [link](../robomaker-robo4kids/documentation/README.md).
 
-## Instructions for deployment
+## Instructions for deploying the develop environment
+
 ---
+
 ### First, some considerations...
-- We used as a base [this workshop](https://robomakerworkshops.com/ws/teleop_robomaker) and built our solution on top so the first steps are going to be similar. 
+
+- We used as a base [this workshop](https://robomakerworkshops.com/ws/teleop_robomaker) and built our solution on top so the first steps are going to be similar.
 - We will deploy resources we are not going to use in our project but are used in the workshop (this is part of the work in progress).
 - The instructions below are enough to launch Robo4Kids. It is not necessary to visit the link of the teleop-workshop.
 
 ### 1. Setting up the environment
+
 Select the region US East (N. Virginia) us-east-1 and launch the [CloudFormation stack](https://console.aws.amazon.com/cloudformation/home#/stacks/new?templateURL=https://s3.amazonaws.com/assets.robomakerworkshops.com/cfn/bootstrap.cfn.yaml&region=us-east-1):
 
 ![Stack](resources/images/1-cloudformation-stack.png)
@@ -50,11 +56,22 @@ Some options are needed to launch the environment. We will give a name to the en
 Once we click **Create** a AWS Cloud9 environment will be launched. This is because RoboMaker is built on top AWS Cloud9 and have some new features specific for robotics development. To get more details visit [this link](https://docs.aws.amazon.com/robomaker/latest/dg/how-it-works-create-environment.html). This different features are pointed and explained in the [original workshop](https://robomakerworkshops.com/ws/teleop_robomaker).
 
 #### Clone the Robot Application and Install Dependencies
+
 Now that we got our environment running let's set up the robot application.
+
+First we need to clone the repository with Robo4Kids files for RoboMaker in order to be able to launch the simulations.
 
 ```console
 cd ~/environment 
-git clone https://github.com/...
+git clone --branch dev-instr https://github.com/anto-aws/robo4kids.git
 ```
 
+Once we got the files, we need to set up the file `roboMakerSettings.json` using a bash script named `install_deps.sh`, provided in the assets file.
 
+Notice that the third line require **your cloudFormation stack name** `sudo ./install_deps.sh <your cloudFormation stack>`. In my example, the name is **robo4kids-stack** but if you used another name, you need to change it.
+
+```console
+cd robo4kids/robo4kids-robomaker/jetbot/assets/scripts/
+chmod +x install_deps.sh
+sudo ./install_deps.sh robo4kids-stack
+```
