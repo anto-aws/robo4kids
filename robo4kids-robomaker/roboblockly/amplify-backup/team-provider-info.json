@@ -4,7 +4,7 @@
       "AuthRoleName": "amplify-roboblockly-dev-95708-authRole",
       "UnauthRoleArn": "arn:aws:iam::746842823392:role/amplify-roboblockly-dev-95708-unauthRole",
       "AuthRoleArn": "arn:aws:iam::746842823392:role/amplify-roboblockly-dev-95708-authRole",
-      "Region": "us-west-2",
+      "Region": "us-west-1",
       "DeploymentBucketName": "amplify-roboblockly-dev-95708-deployment",
       "UnauthRoleName": "amplify-roboblockly-dev-95708-unauthRole",
       "StackName": "amplify-roboblockly-dev-95708",

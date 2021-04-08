@@ -38,7 +38,7 @@ import instrLvl2 from './components/levels/level2_instructions';
 Amplify.configure(awsconfig);
 
 Amplify.addPluggable(new AWSIoTProvider({
- aws_pubsub_region: 'us-west-2',
+ aws_pubsub_region: 'us-west-1',
  aws_pubsub_endpoint: 'wss://ajlhtk9kwdt15-ats.iot.us-west-2.amazonaws.com/mqtt',
 }));
 
